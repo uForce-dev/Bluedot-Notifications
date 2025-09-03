@@ -1,8 +1,13 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    base_dir: Path = Path(__file__).resolve().parent.parent.parent
+
     debug: bool = True
+    log_level: str = "DEBUG"
 
     db_scheme: str = "postgresql+psycopg2"
     db_host: str = "localhost"

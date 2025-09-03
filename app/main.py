@@ -1,12 +1,28 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 import uvicorn
 from fastapi import FastAPI
 
 from app.api.routes import api_router
+from app.core import configure_logging
 from app.core.config import settings
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    configure_logging(settings.log_level)
+    yield
+
+
 def create_app() -> FastAPI:
-    application = FastAPI(title="Bluedot Notifications", version="0.1.0", debug=settings.debug)
+    application = FastAPI(
+        title="Bluedot Notifications",
+        version="0.1.0",
+        debug=settings.debug,
+        lifespan=lifespan,
+    )
+
     application.include_router(api_router)
     return application
 
