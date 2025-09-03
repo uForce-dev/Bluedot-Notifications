@@ -17,4 +17,7 @@ env/
 # Testing
 .pytest_cache/
 
+# Docker Volumes
+./volumes/
+
 
