@@ -4,7 +4,8 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
-from app.api.routes import api_router
+from app.api.routes.system import router as system_router
+from app.api.routes.webhook import router as webhook_router
 from app.core import configure_logging
 from app.core.config import settings
 
@@ -23,11 +24,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    application.include_router(api_router)
+    application.include_router(system_router)
+    application.include_router(webhook_router)
     return application
 
 
 app = create_app()
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.port, reload=True)

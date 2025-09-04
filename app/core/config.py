@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     base_dir: Path = Path(__file__).resolve().parent.parent.parent
 
     debug: bool = True
+    port: int = 8000
     log_level: str = "DEBUG"
 
     db_scheme: str = "postgresql+psycopg2"
