@@ -12,3 +12,9 @@ class BluedotMeetingSummaryCreatedEvent(BaseModel):
     title: str
     type: str
     video_id: str = Field(alias="videoId")
+
+    @property
+    def meeting_link(self) -> str:
+        if self.meeting_id.startswith("http"):
+            return self.meeting_id
+        return f"https://{self.meeting_id}"

@@ -3,7 +3,9 @@ from logging.config import dictConfig
 from app.core.config import settings
 
 
-def configure_logging(level: str = "INFO", logfile: str = settings.base_dir / "logs/app.log") -> None:
+def configure_logging(
+    level: str = "INFO", logfile: str = settings.base_dir / "logs/app.log"
+) -> None:
     dictConfig(
         {
             "version": 1,

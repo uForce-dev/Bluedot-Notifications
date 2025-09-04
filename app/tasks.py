@@ -1,8 +1,9 @@
 import logging
 from datetime import timedelta
+from typing import Any
 
 from celery import Celery
-from mattermostdriver import Driver  # noqa
+from mattermostdriver import Driver
 
 from app.api.scheme import BluedotMeetingSummaryCreatedEvent
 from app.core.config import settings
@@ -14,39 +15,44 @@ celery_app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_u
 
 
 @celery_app.task(name="process_bluedot_webhook")
-def process_bluedot_webhook(event_data: dict):
-    # Pydantic's from_orm/model_validate doesn't handle aliased fields well from dict
-    event_data["createdAt"] = event_data.pop("created_at")
-    event_data["meetingId"] = event_data.pop("meeting_id")
-    event_data["summaryV2"] = event_data.pop("summary_v2")
-    event_data["videoId"] = event_data.pop("video_id")
+def process_bluedot_webhook(event_data: dict) -> None:
     event = BluedotMeetingSummaryCreatedEvent.model_validate(event_data)
 
     for attendee_email in event.attendees:
         try:
             calendar_service = GoogleCalendarService(user_email=attendee_email)
+            if not calendar_service.is_ready():
+                continue
+
             next_occurrence = calendar_service.find_recurring_event_next_occurrence(
-                meeting_link=event.meeting_id,
+                meeting_link=event.meeting_link,
                 start_time=event.created_at,
+            )
+
+            logger.info(
+                f"For user {attendee_email}, next_occurrence: {next_occurrence}"
             )
 
             if next_occurrence:
                 reminder_time = next_occurrence - timedelta(hours=1)
                 send_mattermost_reminder.apply_async(
-                    args=[event.model_dump(by_alias=True)], eta=reminder_time
+                    args=[event.model_dump(by_alias=True, mode="json")],
+                    eta=reminder_time,
                 )
                 logger.info(
                     f"Scheduled reminder for {event.meeting_id} at {reminder_time} "
                     f"for attendees: {event.attendees}"
                 )
-                # Once we find the event in one person's calendar, we assume it's the same for all
                 break
         except Exception as e:
-            logger.error(f"Could not process calendar for {attendee_email}. Error: {e}")
+            logger.error(
+                f"Could not process calendar for {attendee_email}. Error: {e}",
+                exc_info=True,
+            )
 
 
 @celery_app.task(name="send_mattermost_reminder")
-def send_mattermost_reminder(event_data: dict):
+def send_mattermost_reminder(event_data: dict[str, Any]) -> None:
     event = BluedotMeetingSummaryCreatedEvent.model_validate(event_data)
     try:
         mm = Driver(
@@ -58,12 +64,6 @@ def send_mattermost_reminder(event_data: dict):
             }
         )
         mm.login()
-        team = mm.teams.get_team_by_name(settings.mattermost_team_name)
-        if not team:
-            logger.error(
-                f"Mattermost team '{settings.mattermost_team_name}' not found."
-            )
-            return
 
         user_ids = []
         for email in event.attendees:
@@ -77,7 +77,6 @@ def send_mattermost_reminder(event_data: dict):
             logger.error("No Mattermost users found to send reminder to.")
             return
 
-        # Create a group message
         channel = mm.channels.create_group_message_channel(user_ids)
 
         message = (
