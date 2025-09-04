@@ -9,11 +9,13 @@ from app.api.routes.webhook import router as webhook_router
 from app.core import configure_logging
 from app.core.config import settings
 from app.db import Base, engine
+from app.loader import init_mm_driver
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging(settings.log_level)
+    init_mm_driver()
     # TODO: Remove on prod
     Base.metadata.create_all(bind=engine)
     yield

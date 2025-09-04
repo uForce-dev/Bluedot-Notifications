@@ -18,6 +18,6 @@ env/
 .pytest_cache/
 
 # Docker Volumes
-./volumes/
+volumes/*
 
 

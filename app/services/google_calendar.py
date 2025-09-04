@@ -14,7 +14,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
 class GoogleCalendarService:
-    def __init__(self, user_email: str):
+    def __init__(self, user_email: str) -> None:
         self.user_email = user_email
         self.service = None
         try:
@@ -37,7 +37,7 @@ class GoogleCalendarService:
 
     def find_recurring_event_next_occurrence(
         self, meeting_link: str, start_time: datetime
-    ) -> datetime | None:
+    ) -> tuple[str, str, datetime] | None:
         print(f"start_time: {start_time}")
         if not self.is_ready():
             return None
@@ -79,7 +79,7 @@ class GoogleCalendarService:
         if next_occurrence:
             logger.info(f"Next meeting for {meeting_link} is at {next_occurrence}")
 
-        return next_occurrence
+        return event["summary"], event["htmlLink"], next_occurrence
 
     def _find_event_by_link(
         self, meeting_link: str, search_time: datetime

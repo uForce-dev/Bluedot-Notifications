@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     base_dir: Path = Path(__file__).resolve().parent.parent.parent
 
     # Security
-    debug: bool = True
+    debug: bool
     port: int
 
     # Logging
@@ -31,7 +31,6 @@ class Settings(BaseSettings):
     # Mattermost
     mattermost_url: str
     mattermost_token: str
-    mattermost_team_name: str
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -40,6 +39,14 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/0"
+
+    @property
+    def mattermost_domain(self) -> str:
+        return (
+            settings.mattermost_url.replace("https://", "")
+            .replace("http://", "")
+            .rstrip("/")
+        )
 
 
 settings = Settings()  # noqa
