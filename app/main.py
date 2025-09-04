@@ -8,11 +8,14 @@ from app.api.routes.system import router as system_router
 from app.api.routes.webhook import router as webhook_router
 from app.core import configure_logging
 from app.core.config import settings
+from app.db import Base, engine
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging(settings.log_level)
+    # TODO: Remove on prod
+    Base.metadata.create_all(bind=engine)
     yield
 
 

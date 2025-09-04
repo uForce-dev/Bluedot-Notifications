@@ -13,5 +13,5 @@ ROUTER_TAGS = ["webhook"]
 
 @router.post("/webhook/bluedot/events", tags=ROUTER_TAGS)
 async def webhook(event: BluedotMeetingSummaryCreatedEvent) -> Response:
-    logger.info(f"Webhook request received. Event:\n{event.model_dump()}")
+    logger.info(f"Webhook request received. Queuing task for event: {event.type}")
     return Response(status_code=HTTPStatus.OK)
