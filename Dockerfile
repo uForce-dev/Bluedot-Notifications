@@ -12,6 +12,6 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 
 COPY ./app /app/app
 
-EXPOSE 8000
+EXPOSE ${INTERNAL_PORT}
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${INTERNAL_PORT}", "--reload"]

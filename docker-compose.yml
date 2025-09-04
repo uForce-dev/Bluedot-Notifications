@@ -38,11 +38,11 @@ services:
 
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+    command: uvicorn app.main:app --host 0.0.0.0 --port ${INTERNAL_PORT:-8000}
     volumes:
       - .:/app
     ports:
-      - "${PORT:-8000}:8000"
+      - "${EXTERNAL_PORT:-8000}:${INTERNAL_PORT:-8000}"
     environment:
       - DB_HOST=db
       - REDIS_HOST=redis

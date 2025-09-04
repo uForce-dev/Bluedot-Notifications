@@ -194,3 +194,13 @@ def process_bluedot_webhook(event_data):
 def process_bluedot_webhook(event_data):
     return 1
 
+2025-09-04 13:41:26,837 DEBUG [urllib3.connectionpool] Starting new HTTPS connection (1): mm.uforce.pro:443
+2025-09-04 13:41:27,422 DEBUG [urllib3.connectionpool] https://mm.uforce.pro:443 "GET /api/v4/users/me HTTP/1.1" 200 916
+2025-09-04 13:41:37,358 DEBUG [urllib3.connectionpool] Starting new HTTPS connection (1): mm.uforce.pro:443
+2025-09-04 13:41:37,817 DEBUG [urllib3.connectionpool] https://mm.uforce.pro:443 "GET /api/v4/users/me HTTP/1.1" 200 916
+2025-09-04 13:42:08,684 DEBUG [urllib3.connectionpool] Starting new HTTPS connection (1): mm.uforce.pro:443
+2025-09-04 13:42:09,505 DEBUG [urllib3.connectionpool] https://mm.uforce.pro:443 "GET /api/v4/users/me HTTP/1.1" 200 916
+2025-09-04 13:43:56,942 DEBUG [urllib3.connectionpool] Starting new HTTPS connection (1): mm.uforce.pro:443
+2025-09-04 13:43:57,568 DEBUG [urllib3.connectionpool] https://mm.uforce.pro:443 "GET /api/v4/users/me HTTP/1.1" 200 916
+2025-09-04 13:45:43,628 DEBUG [urllib3.connectionpool] Starting new HTTPS connection (1): mm.uforce.pro:443
+2025-09-04 13:45:44,256 DEBUG [urllib3.connectionpool] https://mm.uforce.pro:443 "GET /api/v4/users/me HTTP/1.1" 200 916

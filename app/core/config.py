@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Security
     debug: bool
-    port: int
+    internal_port: int
 
     # Logging
     log_level: str
