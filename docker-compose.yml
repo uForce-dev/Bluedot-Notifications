@@ -2,16 +2,16 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-postgres}
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     command: postgres -c log_statement=all
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      test: [ "CMD", "pg_isready", "-U", "${DB_USER:-postgres}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,13 +23,30 @@ services:
     ports:
       - "6379:6379"
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  worker:
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+    volumes:
+      - .:/app
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery:
     build: .
     command: celery -A app.tasks.celery_app worker --loglevel=info
     volumes:
