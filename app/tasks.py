@@ -33,7 +33,6 @@ def process_bluedot_webhook(event_data: dict) -> None:
     root_posts: dict[str, tuple[str, str]] = {}
     next_data: dict[str, tuple[str | None, datetime | None, datetime | None]] = {}
     for attendee_email in event.attendees:
-        # Pre-compute next occurrence (once per attendee) and send summary-ready DM
         meeting_link_resolved: str | None = None
         next_occurrence: datetime | None = None
         try:
@@ -50,7 +49,7 @@ def process_bluedot_webhook(event_data: dict) -> None:
 
         reminder_time: datetime | None = None
         if next_occurrence:
-            reminder_time = datetime.now() + timedelta(hours=1)
+            reminder_time = next_occurrence - timedelta(hours=1)
 
         next_data[attendee_email] = (
             meeting_link_resolved or event.meeting_link,
@@ -91,7 +90,7 @@ def process_bluedot_webhook(event_data: dict) -> None:
                         )
                     )
             if reminder_time is None and next_occurrence is not None:
-                reminder_time = datetime.now() + timedelta(hours=1)
+                reminder_time = next_occurrence - timedelta(hours=1)
 
             logger.info(
                 f"For user {attendee_email}, next_occurrence: {next_occurrence}"
