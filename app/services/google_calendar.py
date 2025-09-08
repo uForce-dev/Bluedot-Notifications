@@ -23,14 +23,8 @@ class GoogleCalendarService:
             )
             delegated_credentials = creds.with_subject(user_email)
             self.service = build("calendar", "v3", credentials=delegated_credentials)
-        except FileNotFoundError:
-            logger.error(
-                f"Service account file not found at: {settings.google_service_account_file}"
-            )
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize Google Calendar service for {user_email}: {e}"
-            )
+        except Exception:
+            logger.exception("Failed to initialize Google Calendar service")
 
     def is_ready(self) -> bool:
         return self.service is not None
@@ -38,17 +32,11 @@ class GoogleCalendarService:
     def find_recurring_event_next_occurrence(
         self, meeting_link: str, start_time: datetime
     ) -> tuple[str, str, datetime] | None:
-        print(f"start_time: {start_time}")
         if not self.is_ready():
             return None
 
         event = self._find_event_by_link(meeting_link, start_time)
-        logger.info(f"Event found: {event}")
         if not event:
-            logger.warning(
-                f"No calendar event found for link '{meeting_link}' "
-                f"in calendar of '{self.user_email}'"
-            )
             return None
 
         recurrence = event.get("recurrence")
@@ -62,7 +50,6 @@ class GoogleCalendarService:
             recurrence = parent_event.get("recurrence")
 
         if not recurrence:
-            logger.info(f"Meeting {meeting_link} is not a recurring event.")
             return None
 
         event_start_str = event["start"].get("dateTime")
@@ -70,14 +57,10 @@ class GoogleCalendarService:
 
         rrule_str = next((r for r in recurrence if r.startswith("RRULE:")), None)
         if not rrule_str:
-            logger.warning("No RRULE found in recurrence.")
             return None
 
         rules = rrulestr(rrule_str, dtstart=event_start)
         next_occurrence = rules.after(event_start)
-
-        if next_occurrence:
-            logger.info(f"Next meeting for {meeting_link} is at {next_occurrence}")
 
         return event["summary"], event["htmlLink"], next_occurrence
 
@@ -86,13 +69,6 @@ class GoogleCalendarService:
     ) -> dict | None:
         time_min = (search_time - timedelta(hours=12)).isoformat()
         time_max = (search_time + timedelta(hours=12)).isoformat()
-
-        logger.debug(
-            f"Searching calendar for {self.user_email} between {time_min} and {time_max}"
-        )
-        print(
-            f"Searching calendar for {self.user_email} between {time_min} and {time_max}"
-        )
 
         try:
             events_result = (
@@ -106,7 +82,6 @@ class GoogleCalendarService:
                 )
                 .execute()
             )
-            print(f"events_result: {events_result}")
             events = events_result.get("items", [])
 
             for event in events:
@@ -115,15 +90,9 @@ class GoogleCalendarService:
 
             return None
 
-        except HttpError as e:
-            logger.error(
-                f"HTTP error fetching calendar for {self.user_email}. "
-                f"Status: {e.resp.status}, Reason: {e.reason}, URL: {e.uri}, Body: {e.content.decode()}"
-            )
+        except HttpError:
+            logger.exception("HTTP error fetching calendar")
             return None
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while fetching Google Calendar events for {self.user_email}: {e}",
-                exc_info=True,
-            )
+        except Exception:
+            logger.exception("Unexpected error fetching calendar events")
             return None

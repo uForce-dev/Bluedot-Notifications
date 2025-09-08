@@ -7,8 +7,13 @@ from celery.signals import worker_process_init
 
 from app.api.scheme import BluedotMeetingSummaryCreatedEvent
 from app.core.config import settings
-from app.loader import init_mm_driver, mm_driver
+from app.loader import init_mm_driver
+from app.core import configure_logging
+from app.db.session import SessionLocal
 from app.services.google_calendar import GoogleCalendarService
+from app.infrastructure.mattermost import MattermostClient
+from app.infrastructure.repositories import SQLAlchemyNotificationLogRepository
+from app.application.reminder import ReminderService
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +22,7 @@ celery_app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_u
 
 @worker_process_init.connect
 def init_mattermost(**kwargs) -> None:
+    configure_logging(settings.log_level)
     init_mm_driver()
 
 
@@ -44,15 +50,11 @@ def process_bluedot_webhook(event_data: dict) -> None:
             if next_occurrence:
                 # reminder_time = next_occurrence - timedelta(hours=1)
                 reminder_time = datetime.now() + timedelta(minutes=1)
-                # send_mattermost_reminder.apply_async(
-                #     args=[event.model_dump(by_alias=True, mode="json")],
-                #     eta=reminder_time,
-                # )
                 send_mattermost_reminder.apply_async(
                     args=[
-                        meeting_name,
                         meeting_link,
                         event.model_dump(by_alias=True, mode="json"),
+                        next_occurrence.isoformat() if next_occurrence else None,
                     ],
                 )
                 logger.info(
@@ -69,38 +71,32 @@ def process_bluedot_webhook(event_data: dict) -> None:
 
 @celery_app.task(name="send_mattermost_reminder")
 def send_mattermost_reminder(
-    meeting_name: str, meeting_link: str, event_data: dict[str, Any]
+    meeting_link: str, event_data: dict[str, Any], meeting_time_iso: str | None
 ) -> None:
     event = BluedotMeetingSummaryCreatedEvent.model_validate(event_data)
 
-    me = mm_driver.users.get_user("me")
-    bot_user_id = me["id"]
-
     for email in event.attendees:
+        db = SessionLocal()
         try:
-            user = mm_driver.users.get_user_by_email(email)
-            print(f"user: {user}")
-            user_id = user["id"]
-            print(f"user_id: {user_id}")
-
-            dm_channel = mm_driver.channels.create_direct_message_channel(
-                [bot_user_id, user_id]
+            meeting_time = (
+                datetime.fromisoformat(meeting_time_iso) if meeting_time_iso else None
             )
-
-            message = (
-                f"📅 **Напоминание о предстоящей встрече: [{meeting_name}]({meeting_link})**\n\n"
-                "Вот краткое содержание прошлого созвона:\n\n"
-                "---\n\n"
-                f"{event.summary_v2}"
+            service = ReminderService(
+                mm=MattermostClient(),
+                logs=SQLAlchemyNotificationLogRepository(db),
             )
-
-            mm_driver.posts.create_post(
-                options={"channel_id": dm_channel["id"], "message": message}
+            service.send_reminder(
+                user_email=email,
+                title=event.title,
+                meeting_link=meeting_link,
+                meeting_time=meeting_time,
+                summary=event.summary_v2,
             )
-            logger.info(f"Sent a DM reminder to the user {email} ({user_id}).")
 
         except Exception as e:
             logger.exception(
                 f"It was not possible to send a reminder to the user {email}: {e}",
                 exc_info=True,
             )
+        finally:
+            db.close()
