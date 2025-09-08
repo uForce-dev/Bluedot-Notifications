@@ -31,17 +31,7 @@ class ReminderService:
         user = self.mm.get_user_by_email(user_email)
         user_id = user["id"]
 
-        tz = ZoneInfo(settings.timezone)
-        if meeting_time:
-            src = (
-                meeting_time
-                if meeting_time.tzinfo
-                else meeting_time.replace(tzinfo=ZoneInfo("UTC"))
-            )
-            mt_local = src.astimezone(tz)
-            time_part = mt_local.strftime("%d.%m.%Y %H:%M %Z")
-        else:
-            time_part = ""
+        time_part = self._format_dt(meeting_time)
         summary_part = f"\n\n---\n\n{summary}" if summary else ""
         message = (
             f"📅 **Регулярная встреча: [{title}]({meeting_link})**\n\n"
@@ -81,16 +71,11 @@ class ReminderService:
         user = self.mm.get_user_by_email(user_email)
         user_id = user["id"]
 
-        if reminder_time:
-            src = (
-                reminder_time
-                if reminder_time.tzinfo
-                else reminder_time.replace(tzinfo=ZoneInfo("UTC"))
-            )
-            rt_local = src.astimezone(tz)
-            reminder_note = f"\n\n🔔 Я напомню тебе об этом саммари перед следующей встречей, в {rt_local.strftime('%d.%m.%Y %H:%M %Z')}"
-        else:
-            reminder_note = ""
+        reminder_note = (
+            f"\n\n🔔 Я напомню тебе об этом саммари перед следующей встречей, в {self._format_dt(reminder_time)}"
+            if reminder_time
+            else ""
+        )
         message = (
             f"📝 **Готово краткое содержание встречи: [{title}]({meeting_link})**\n"
             f"{reminder_note}\n\n"
@@ -126,17 +111,7 @@ class ReminderService:
         meeting_link: str,
         meeting_time: datetime | None,
     ) -> None:
-        tz = ZoneInfo(settings.timezone)
-        if meeting_time:
-            src = (
-                meeting_time
-                if meeting_time.tzinfo
-                else meeting_time.replace(tzinfo=ZoneInfo("UTC"))
-            )
-            mt_local = src.astimezone(tz)
-            time_part = mt_local.strftime("%d.%m.%Y %H:%M %Z")
-        else:
-            time_part = ""
+        time_part = self._format_dt(meeting_time)
         message = (
             f"<@{user_email}> 📅 Привет! У тебя регулярная встреча [{title}]({meeting_link}) в {time_part}.\n"
             f"Можешь взглянуть на саммари прошлой встречи перед началом."
@@ -144,3 +119,12 @@ class ReminderService:
         self.mm.reply_in_thread(
             root_post_id=root_post_id, channel_id=channel_id, message=message
         )
+
+    @staticmethod
+    def _format_dt(dt: datetime | None) -> str:
+        if not dt:
+            return ""
+        target_tz = tz
+        src = dt if dt.tzinfo else dt.replace(tzinfo=ZoneInfo("UTC"))
+        local = src.astimezone(target_tz)
+        return local.strftime("%d.%m.%Y %H:%M %Z")

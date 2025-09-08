@@ -31,64 +31,74 @@ def process_bluedot_webhook(event_data: dict) -> None:
     event = BluedotMeetingSummaryCreatedEvent.model_validate(event_data)
 
     root_posts: dict[str, tuple[str, str]] = {}
+    next_data: dict[str, tuple[str | None, datetime | None, datetime | None]] = {}
     for attendee_email in event.attendees:
-        db = SessionLocal()
+        # Pre-compute next occurrence (once per attendee) and send summary-ready DM
+        meeting_link_resolved: str | None = None
+        next_occurrence: datetime | None = None
         try:
-            service = ReminderService(
-                mm=MattermostClient(),
-                logs=SQLAlchemyNotificationLogRepository(db),
-            )
+            calendar_service = GoogleCalendarService(user_email=attendee_email)
+            if calendar_service.is_ready():
+                meeting_link_resolved, next_occurrence = (
+                    calendar_service.find_recurring_event_next_occurrence(
+                        meeting_link=event.meeting_link,
+                        start_time=event.created_at,
+                    )
+                )
+        except Exception:
+            logger.exception("Failed to compute next occurrence for summary message")
 
-            reminder_time = None
+        reminder_time: datetime | None = None
+        if next_occurrence:
+            reminder_time = datetime.now() + timedelta(hours=1)
+
+        next_data[attendee_email] = (
+            meeting_link_resolved or event.meeting_link,
+            next_occurrence,
+            reminder_time,
+        )
+
+        with SessionLocal() as db:
             try:
+                service = ReminderService(
+                    mm=MattermostClient(),
+                    logs=SQLAlchemyNotificationLogRepository(db),
+                )
+                res = service.send_summary_ready(
+                    user_email=attendee_email,
+                    title=event.title,
+                    meeting_link=event.meeting_link,
+                    summary=event.summary_v2,
+                    reminder_time=reminder_time,
+                )
+                if res:
+                    root_posts[attendee_email] = res
+            except Exception:
+                logger.exception("Failed to send immediate summary notification")
+
+    for attendee_email in event.attendees:
+        try:
+            meeting_link, next_occurrence, reminder_time = next_data.get(
+                attendee_email, (event.meeting_link, None, None)
+            )
+            if next_occurrence is None:
                 calendar_service = GoogleCalendarService(user_email=attendee_email)
                 if calendar_service.is_ready():
-                    meeting_link_candidate, next_occurrence = (
+                    meeting_link, next_occurrence = (
                         calendar_service.find_recurring_event_next_occurrence(
                             meeting_link=event.meeting_link,
                             start_time=event.created_at,
                         )
                     )
-                    if next_occurrence:
-                        # Keep same testing delay policy as below scheduling block
-                        reminder_time = datetime.now() + timedelta(seconds=10)
-            except Exception:
-                logger.exception("Failed to compute reminder_time for summary message")
-
-            res = service.send_summary_ready(
-                user_email=attendee_email,
-                title=event.title,
-                meeting_link=event.meeting_link,
-                summary=event.summary_v2,
-                reminder_time=reminder_time,
-            )
-            if res:
-                root_posts[attendee_email] = res
-        except Exception:
-            logger.exception("Failed to send immediate summary notification")
-        finally:
-            db.close()
-
-    for attendee_email in event.attendees:
-        try:
-            calendar_service = GoogleCalendarService(user_email=attendee_email)
-            if not calendar_service.is_ready():
-                continue
-
-            meeting_link, next_occurrence = (
-                calendar_service.find_recurring_event_next_occurrence(
-                    meeting_link=event.meeting_link,
-                    start_time=event.created_at,
-                )
-            )
+            if reminder_time is None and next_occurrence is not None:
+                reminder_time = datetime.now() + timedelta(hours=1)
 
             logger.info(
                 f"For user {attendee_email}, next_occurrence: {next_occurrence}"
             )
 
-            if next_occurrence:
-                # reminder_time = next_occurrence - timedelta(hours=1)
-                reminder_time = datetime.now() + timedelta(seconds=10)
+            if next_occurrence and reminder_time:
+                # reminder_time could be computed as next_occurrence - timedelta(hours=1)
                 send_mattermost_reminder.apply_async(
                     args=[
                         meeting_link,
