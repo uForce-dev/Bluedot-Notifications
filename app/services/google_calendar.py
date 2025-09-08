@@ -31,7 +31,7 @@ class GoogleCalendarService:
 
     def find_recurring_event_next_occurrence(
         self, meeting_link: str, start_time: datetime
-    ) -> tuple[str, str, datetime] | None:
+    ) -> tuple[str, datetime] | None:
         if not self.is_ready():
             return None
 
@@ -62,7 +62,7 @@ class GoogleCalendarService:
         rules = rrulestr(rrule_str, dtstart=event_start)
         next_occurrence = rules.after(event_start)
 
-        return event["summary"], event["htmlLink"], next_occurrence
+        return event["htmlLink"], next_occurrence
 
     def _find_event_by_link(
         self, meeting_link: str, search_time: datetime

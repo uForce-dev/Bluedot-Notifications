@@ -16,6 +16,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         self,
         recipient_email: str,
         recipient_user_id: Optional[str],
+        notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
     ) -> None:
@@ -23,6 +24,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
             NotificationLog(
                 recipient_email=recipient_email,
                 recipient_user_id=recipient_user_id,
+                notification_type=notification_type,
                 meeting_name=meeting_name,
                 meeting_link=meeting_link,
                 status="sent",
@@ -33,6 +35,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
     def log_failed(
         self,
         recipient_email: str,
+        notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
         error: str,
@@ -42,6 +45,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
             NotificationLog(
                 recipient_email=recipient_email,
                 recipient_user_id=recipient_user_id,
+                notification_type=notification_type,
                 meeting_name=meeting_name,
                 meeting_link=meeting_link,
                 status="failed",

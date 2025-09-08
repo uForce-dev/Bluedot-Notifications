@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # Logging
     log_level: str
 
+    # Timezone
+    timezone: str = "UTC"
+
     # Database
     db_scheme: str
     db_host: str

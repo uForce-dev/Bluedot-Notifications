@@ -8,6 +8,7 @@ class NotificationLogRepository(Protocol):
         self,
         recipient_email: str,
         recipient_user_id: Optional[str],
+        notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
     ) -> None: ...
@@ -15,6 +16,7 @@ class NotificationLogRepository(Protocol):
     def log_failed(
         self,
         recipient_email: str,
+        notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
         error: str,

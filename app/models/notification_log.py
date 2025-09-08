@@ -13,6 +13,7 @@ class NotificationLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     recipient_email = Column(String(320), nullable=False, index=True)
     recipient_user_id = Column(String(128), nullable=True, index=True)
+    notification_type = Column(String(32), nullable=False, default="reminder")
     meeting_name = Column(String(512), nullable=True)
     meeting_link = Column(String(1024), nullable=True)
     status = Column(String(32), nullable=False, default="sent")

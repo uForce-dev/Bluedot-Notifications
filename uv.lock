@@ -77,6 +77,7 @@ dependencies = [
     { name = "redis" },
     { name = "ruff" },
     { name = "sqlalchemy" },
+    { name = "tzdata" },
     { name = "uvicorn" },
 ]
 
@@ -95,6 +96,7 @@ requires-dist = [
     { name = "redis", specifier = ">=6.4.0" },
     { name = "ruff", specifier = ">=0.12.11" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
+    { name = "tzdata", specifier = ">=2025.2" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 
