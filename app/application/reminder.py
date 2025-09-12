@@ -119,6 +119,13 @@ class ReminderService:
         self.mm.reply_in_thread(
             root_post_id=root_post_id, channel_id=channel_id, message=message
         )
+        self.logs.log_sent(
+            recipient_email=user_email,
+            recipient_user_id=None,
+            notification_type="reminder",
+            meeting_name=title,
+            meeting_link=meeting_link,
+        )
 
     @staticmethod
     def _format_dt(dt: datetime | None) -> str:

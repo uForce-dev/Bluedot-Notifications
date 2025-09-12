@@ -141,21 +141,34 @@ def send_mattermost_reminder(
             root_info = root_posts.get(email)
             if root_info:
                 root_post_id, channel_id = root_info
-                service.reply_reminder_in_thread(
-                    root_post_id=root_post_id,
-                    channel_id=channel_id,
-                    user_email=email,
-                    title=event.title,
+                # Idempotency: skip if already sent for this link/type/email
+                if not SQLAlchemyNotificationLogRepository(db).exists_sent(
+                    recipient_email=email,
+                    notification_type="reminder",
                     meeting_link=meeting_link,
-                    meeting_time=meeting_time,
-                )
+                    occurrence_at=meeting_time,
+                ):
+                    service.reply_reminder_in_thread(
+                        root_post_id=root_post_id,
+                        channel_id=channel_id,
+                        user_email=email,
+                        title=event.title,
+                        meeting_link=meeting_link,
+                        meeting_time=meeting_time,
+                    )
             else:
-                service.send_reminder(
-                    user_email=email,
-                    title=event.title,
+                if not SQLAlchemyNotificationLogRepository(db).exists_sent(
+                    recipient_email=email,
+                    notification_type="reminder",
                     meeting_link=meeting_link,
-                    meeting_time=meeting_time,
-                )
+                    occurrence_at=meeting_time,
+                ):
+                    service.send_reminder(
+                        user_email=email,
+                        title=event.title,
+                        meeting_link=meeting_link,
+                        meeting_time=meeting_time,
+                    )
 
         except Exception as e:
             logger.exception(

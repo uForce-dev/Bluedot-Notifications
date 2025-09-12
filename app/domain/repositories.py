@@ -11,6 +11,7 @@ class NotificationLogRepository(Protocol):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
+        occurrence_at: Optional[datetime] = None,
     ) -> None: ...
 
     def log_failed(
@@ -19,6 +20,15 @@ class NotificationLogRepository(Protocol):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
+        occurrence_at: Optional[datetime] = None,
         error: str,
         recipient_user_id: Optional[str] = None,
     ) -> None: ...
+
+    def exists_sent(
+        self,
+        recipient_email: str,
+        notification_type: str,
+        meeting_link: str,
+        occurrence_at: Optional[datetime] = None,
+    ) -> bool: ...
