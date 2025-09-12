@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -40,8 +41,8 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
-        occurrence_at: Optional[datetime] = None,
         error: str,
+        occurrence_at: Optional[datetime] = None,
         recipient_user_id: Optional[str] = None,
     ) -> None:
         self.db.add(
@@ -65,14 +66,11 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         meeting_link: str,
         occurrence_at: Optional[datetime] = None,
     ) -> bool:
-        query = (
-            self.db.query(NotificationLog)
-            .filter(
-                NotificationLog.recipient_email == recipient_email,
-                NotificationLog.notification_type == notification_type,
-                NotificationLog.meeting_link == meeting_link,
-                NotificationLog.status == "sent",
-            )
+        query = self.db.query(NotificationLog).filter(
+            NotificationLog.recipient_email == recipient_email,
+            NotificationLog.notification_type == notification_type,
+            NotificationLog.meeting_link == meeting_link,
+            NotificationLog.status == "sent",
         )
         if occurrence_at is not None:
             query = query.filter(NotificationLog.occurrence_at == occurrence_at)

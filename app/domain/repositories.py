@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol, Optional
 
 
@@ -20,8 +21,8 @@ class NotificationLogRepository(Protocol):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
-        occurrence_at: Optional[datetime] = None,
         error: str,
+        occurrence_at: Optional[datetime] = None,
         recipient_user_id: Optional[str] = None,
     ) -> None: ...
 
