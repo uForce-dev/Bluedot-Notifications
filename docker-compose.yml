@@ -30,7 +30,7 @@ services:
 
   celery:
     build: .
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info -E
     volumes:
       - .:/app
     depends_on:
@@ -40,7 +40,7 @@ services:
 
   flower:
     build: .
-    command: celery -A app.tasks.celery_app flower --loglevel=info --port=5555
+    command: celery -A app.tasks.celery_app flower --loglevel=info --port=5555 -E
     volumes:
       - .:/app
     environment:
