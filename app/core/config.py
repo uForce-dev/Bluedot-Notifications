@@ -24,9 +24,12 @@ class Settings(BaseSettings):
     db_password: str
     db_name: str
 
-    # Redis for Celery
-    redis_host: str
-    redis_port: int
+    # RabbitMQ
+    rabbitmq_host: str | None = None
+    rabbitmq_port: int | None = None
+    rabbitmq_user: str | None = None
+    rabbitmq_password: str | None = None
+    rabbitmq_vhost: str | None = None
 
     # Google API Service Account
     google_service_account_file: str
@@ -40,16 +43,24 @@ class Settings(BaseSettings):
     )
 
     @property
-    def redis_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/0"
-
-    @property
     def mattermost_domain(self) -> str:
         return (
             settings.mattermost_url.replace("https://", "")
             .replace("http://", "")
             .rstrip("/")
         )
+
+    @property
+    def rabbitmq_url(self) -> str | None:
+        if not (
+            self.rabbitmq_host
+            and self.rabbitmq_port
+            and self.rabbitmq_user
+            and self.rabbitmq_password
+        ):
+            return None
+        vhost = self.rabbitmq_vhost or "%2F"
+        return f"amqp://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_port}/{vhost}"
 
 
 settings = Settings()  # noqa

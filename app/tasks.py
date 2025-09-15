@@ -17,7 +17,23 @@ from app.application.reminder import ReminderService
 
 logger = logging.getLogger(__name__)
 
-celery_app = Celery("tasks", broker=settings.redis_url, backend=settings.redis_url)
+broker_url = settings.rabbitmq_url
+celery_app = Celery("tasks", broker=broker_url, backend=None)
+celery_app.conf.update(
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    worker_prefetch_multiplier=1,
+    enable_utc=True,
+    timezone=settings.timezone,
+    task_publish_retry=True,
+    task_publish_retry_policy={
+        "max_retries": 5,
+        "interval_start": 0,
+        "interval_step": 2,
+        "interval_max": 10,
+    },
+    broker_connection_retry_on_startup=True,
+)
 
 
 @worker_process_init.connect
@@ -97,7 +113,6 @@ def process_bluedot_webhook(event_data: dict) -> None:
             )
 
             if next_occurrence and reminder_time:
-                # reminder_time could be computed as next_occurrence - timedelta(hours=1)
                 send_mattermost_reminder.apply_async(
                     args=[
                         meeting_link,
@@ -109,7 +124,7 @@ def process_bluedot_webhook(event_data: dict) -> None:
                 )
                 logger.info(
                     f"Scheduled reminder for {event.meeting_id} at {reminder_time} "
-                    f"for attendees: {event.attendees}"
+                    f"for attendee: {attendee_email}"
                 )
                 break
         except Exception as e:
@@ -141,7 +156,6 @@ def send_mattermost_reminder(
             root_info = root_posts.get(email)
             if root_info:
                 root_post_id, channel_id = root_info
-                # Idempotency: skip if already sent for this link/type/email
                 if not SQLAlchemyNotificationLogRepository(db).exists_sent(
                     recipient_email=email,
                     notification_type="reminder",

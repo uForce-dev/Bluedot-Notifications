@@ -16,7 +16,6 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pydantic-settings>=2.10.1",
     "python-dateutil>=2.9.0.post0",
-    "redis>=6.4.0",
     "ruff>=0.12.11",
     "sqlalchemy>=2.0.43",
     "tzdata>=2025.2",

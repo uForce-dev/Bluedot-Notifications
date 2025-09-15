@@ -16,7 +16,7 @@ class ReminderService:
         self,
         mm: MattermostGateway,
         logs: NotificationLogRepository,
-    ) -> tuple[str, str] | None:
+    ) -> None:
         self.mm = mm
         self.logs = logs
 
@@ -27,7 +27,7 @@ class ReminderService:
         meeting_link: str,
         meeting_time: datetime | None,
         summary: str | None = None,
-    ) -> None:
+    ) -> tuple[str, str] | None:
         user = self.mm.get_user_by_email(user_email)
         user_id = user["id"]
 
@@ -49,6 +49,7 @@ class ReminderService:
                 meeting_name=title,
                 meeting_link=meeting_link,
             )
+            return (root_post_id, channel_id)
         except Exception as e:
             self.logs.log_failed(
                 recipient_email=user_email,
@@ -58,7 +59,7 @@ class ReminderService:
                 meeting_link=meeting_link,
                 error=str(e),
             )
-        return (root_post_id, channel_id)
+            return None
 
     def send_summary_ready(
         self,
@@ -91,6 +92,7 @@ class ReminderService:
                 meeting_name=title,
                 meeting_link=meeting_link,
             )
+            return (root_post_id, channel_id)
         except Exception as e:
             self.logs.log_failed(
                 recipient_email=user_email,
@@ -100,7 +102,7 @@ class ReminderService:
                 meeting_link=meeting_link,
                 error=str(e),
             )
-        return (root_post_id, channel_id)
+            return None
 
     def reply_reminder_in_thread(
         self,

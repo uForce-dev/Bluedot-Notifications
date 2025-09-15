@@ -1,19 +1,40 @@
 services:
 
-  redis:
-    image: redis:7-alpine
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     volumes:
-      - ./volumes/redis:/data
-    command: >
-      redis-server
-      --appendonly yes
-      --save 60 1
-      --dir /data
+      - ./volumes/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    command: postgres -c log_statement=all
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   api:
@@ -23,9 +44,15 @@ services:
       - .:/app
     ports:
       - "${EXTERNAL_PORT:-8000}:${INTERNAL_PORT:-8000}"
+    environment:
+      - rabbitmq_host=rabbitmq
+      - rabbitmq_port=5672
+      - rabbitmq_user=${RABBITMQ_USER:-guest}
+      - rabbitmq_password=${RABBITMQ_PASSWORD:-guest}
+      - rabbitmq_vhost=${RABBITMQ_VHOST:-/}
     depends_on:
-      redis:
-        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     restart: unless-stopped
 
   celery:
@@ -33,9 +60,15 @@ services:
     command: celery -A app.tasks.celery_app worker --loglevel=info -E
     volumes:
       - .:/app
+    environment:
+      - rabbitmq_host=rabbitmq
+      - rabbitmq_port=5672
+      - rabbitmq_user=${RABBITMQ_USER:-guest}
+      - rabbitmq_password=${RABBITMQ_PASSWORD:-guest}
+      - rabbitmq_vhost=${RABBITMQ_VHOST:-/}
     depends_on:
-      redis:
-        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     restart: unless-stopped
 
   flower:
@@ -45,9 +78,17 @@ services:
       - .:/app
     environment:
       - FLOWER_BASIC_AUTH=admin:O00k0~QDK8
+      - rabbitmq_host=rabbitmq
+      - rabbitmq_port=5672
+      - rabbitmq_user=${RABBITMQ_USER:-guest}
+      - rabbitmq_password=${RABBITMQ_PASSWORD:-guest}
+      - rabbitmq_vhost=${RABBITMQ_VHOST:-/}
     ports:
       - "5555:5555"
     depends_on:
-      redis:
-        condition: service_healthy
+      rabbitmq:
+        condition: service_started
     restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
