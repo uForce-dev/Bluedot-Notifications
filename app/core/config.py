@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,9 +39,17 @@ class Settings(BaseSettings):
     mattermost_url: str
     mattermost_token: str
 
+    # Subscriptions
+    subscribed_emails: str
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
+
+    @computed_field
+    @property
+    def subscribed_emails_list(self) -> list[str]:
+        return [i.strip() for i in self.subscribed_emails.split(",")]
 
     @property
     def mattermost_domain(self) -> str:

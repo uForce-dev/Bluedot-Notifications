@@ -12,6 +12,7 @@ class NotificationLogRepository(Protocol):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
     ) -> None: ...
 
@@ -22,6 +23,7 @@ class NotificationLogRepository(Protocol):
         meeting_name: Optional[str],
         meeting_link: Optional[str],
         error: str,
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
         recipient_user_id: Optional[str] = None,
     ) -> None: ...
@@ -30,6 +32,7 @@ class NotificationLogRepository(Protocol):
         self,
         recipient_email: str,
         notification_type: str,
-        meeting_link: str,
+        meeting_link: Optional[str] = None,
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
     ) -> bool: ...

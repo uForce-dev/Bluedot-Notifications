@@ -20,6 +20,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         notification_type: str,
         meeting_name: Optional[str],
         meeting_link: Optional[str],
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
     ) -> None:
         self.db.add(
@@ -29,6 +30,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
                 notification_type=notification_type,
                 meeting_name=meeting_name,
                 meeting_link=meeting_link,
+                video_id=video_id,
                 occurrence_at=occurrence_at,
                 status="sent",
             )
@@ -42,6 +44,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         meeting_name: Optional[str],
         meeting_link: Optional[str],
         error: str,
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
         recipient_user_id: Optional[str] = None,
     ) -> None:
@@ -52,6 +55,7 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
                 notification_type=notification_type,
                 meeting_name=meeting_name,
                 meeting_link=meeting_link,
+                video_id=video_id,
                 occurrence_at=occurrence_at,
                 status="failed",
                 error=error,
@@ -63,15 +67,19 @@ class SQLAlchemyNotificationLogRepository(NotificationLogRepository):
         self,
         recipient_email: str,
         notification_type: str,
-        meeting_link: str,
+        meeting_link: Optional[str] = None,
+        video_id: Optional[str] = None,
         occurrence_at: Optional[datetime] = None,
     ) -> bool:
         query = self.db.query(NotificationLog).filter(
             NotificationLog.recipient_email == recipient_email,
             NotificationLog.notification_type == notification_type,
-            NotificationLog.meeting_link == meeting_link,
             NotificationLog.status == "sent",
         )
+        if meeting_link is not None:
+            query = query.filter(NotificationLog.meeting_link == meeting_link)
+        if video_id is not None:
+            query = query.filter(NotificationLog.video_id == video_id)
         if occurrence_at is not None:
             query = query.filter(NotificationLog.occurrence_at == occurrence_at)
         return query.first() is not None

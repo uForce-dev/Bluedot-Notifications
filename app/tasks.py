@@ -46,9 +46,15 @@ def init_mattermost(**kwargs) -> None:
 def process_bluedot_webhook(event_data: dict) -> None:
     event = BluedotMeetingSummaryCreatedEvent.model_validate(event_data)
 
+    subscribed = set(email.lower() for email in settings.subscribed_emails_list)
+    attendees = [a for a in event.attendees if a.lower() in subscribed]
+    if not attendees:
+        logger.info("No subscribed attendees for this event; skipping notifications")
+        return
+
     root_posts: dict[str, tuple[str, str]] = {}
     next_data: dict[str, tuple[str | None, datetime | None, datetime | None]] = {}
-    for attendee_email in event.attendees:
+    for attendee_email in attendees:
         meeting_link_resolved: str | None = None
         next_occurrence: datetime | None = None
         try:
@@ -75,23 +81,32 @@ def process_bluedot_webhook(event_data: dict) -> None:
 
         with SessionLocal() as db:
             try:
-                service = ReminderService(
-                    mm=MattermostClient(),
-                    logs=SQLAlchemyNotificationLogRepository(db),
-                )
-                res = service.send_summary_ready(
-                    user_email=attendee_email,
-                    title=event.title,
-                    meeting_link=event.meeting_link,
-                    summary=event.summary_v2,
-                    reminder_time=reminder_time,
-                )
+                logs_repo = SQLAlchemyNotificationLogRepository(db)
+                if logs_repo.exists_sent(
+                    recipient_email=attendee_email,
+                    notification_type="summary",
+                    video_id=event.video_id,
+                ):
+                    res = None
+                else:
+                    service = ReminderService(
+                        mm=MattermostClient(),
+                        logs=logs_repo,
+                    )
+                    res = service.send_summary_ready(
+                        user_email=attendee_email,
+                        title=event.title,
+                        meeting_link=event.meeting_link,
+                        video_id=event.video_id,
+                        summary=event.summary_v2,
+                        reminder_time=reminder_time,
+                    )
                 if res:
                     root_posts[attendee_email] = res
             except Exception:
                 logger.exception("Failed to send immediate summary notification")
 
-    for attendee_email in event.attendees:
+    for attendee_email in attendees:
         try:
             meeting_link, next_occurrence, reminder_time = next_data.get(
                 attendee_email, (event.meeting_link, None, None)
@@ -116,7 +131,10 @@ def process_bluedot_webhook(event_data: dict) -> None:
                 send_mattermost_reminder.apply_async(
                     args=[
                         meeting_link,
-                        event.model_dump(by_alias=True, mode="json"),
+                        {
+                            **event.model_dump(by_alias=True, mode="json"),
+                            "attendees": attendees,
+                        },
                         next_occurrence.isoformat() if next_occurrence else None,
                         root_posts,
                     ],

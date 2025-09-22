@@ -48,6 +48,8 @@ class ReminderService:
                 notification_type="reminder",
                 meeting_name=title,
                 meeting_link=meeting_link,
+                video_id=None,
+                occurrence_at=meeting_time,
             )
             return (root_post_id, channel_id)
         except Exception as e:
@@ -58,6 +60,8 @@ class ReminderService:
                 meeting_name=title,
                 meeting_link=meeting_link,
                 error=str(e),
+                video_id=None,
+                occurrence_at=meeting_time,
             )
             return None
 
@@ -66,6 +70,7 @@ class ReminderService:
         user_email: str,
         title: str,
         meeting_link: str,
+        video_id: str,
         summary: str,
         reminder_time: datetime | None = None,
     ) -> tuple[str, str] | None:
@@ -91,6 +96,8 @@ class ReminderService:
                 notification_type="summary",
                 meeting_name=title,
                 meeting_link=meeting_link,
+                video_id=video_id,
+                occurrence_at=None,
             )
             return (root_post_id, channel_id)
         except Exception as e:
@@ -101,6 +108,8 @@ class ReminderService:
                 meeting_name=title,
                 meeting_link=meeting_link,
                 error=str(e),
+                video_id=video_id,
+                occurrence_at=None,
             )
             return None
 
@@ -127,6 +136,8 @@ class ReminderService:
             notification_type="reminder",
             meeting_name=title,
             meeting_link=meeting_link,
+            video_id=None,
+            occurrence_at=meeting_time,
         )
 
     @staticmethod
